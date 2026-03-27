@@ -19,14 +19,14 @@ jobs:
 
       - name: Prepare Data
         run: |
-          # Navigate to your subfolder if necessary
-          cd TuneAI 
+          cd TuneAI/TuneAI  # Enter the first and second folders
           python data_prepare.py
 
       - name: Train TuneAi (1M Parameters)
         run: |
-          cd TuneAI
+          cd TuneAI/TuneAI  # Enter the folders where train.py lives
           python train.py
+
 
       - name: Upload Trained Brain
         uses: actions/upload-artifact@v4
