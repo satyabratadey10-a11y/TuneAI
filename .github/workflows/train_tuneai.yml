@@ -19,8 +19,13 @@ jobs:
 
       - name: Prepare Data
         run: |
-          cd TuneAI/TuneAI  # Enter the first and second folders
+          cd TuneAI
           python data_prepare.py
+
+      - name: Train TuneAi (1M Parameters)
+        run: |
+          cd TuneAI
+          python train.py
 
       - name: Train TuneAi (1M Parameters)
         run: |
