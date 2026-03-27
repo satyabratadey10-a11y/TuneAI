@@ -1,0 +1,35 @@
+name: Train TuneAi SLM
+on: [workflow_dispatch, push] # Allows you to start training manually
+
+jobs:
+  train-model:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: |
+          pip install torch numpy tqdm
+
+      - name: Prepare Data
+        run: |
+          # Navigate to your subfolder if necessary
+          cd TuneAI 
+          python data_prepare.py
+
+      - name: Train TuneAi (1M Parameters)
+        run: |
+          cd TuneAI
+          python train.py
+
+      - name: Upload Trained Brain
+        uses: actions/upload-artifact@v4
+        with:
+          name: TuneAi-Weights
+          path: TuneAI/checkpoints/tuneai_v1.pth
