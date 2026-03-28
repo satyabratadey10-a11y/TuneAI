@@ -7,7 +7,7 @@ jobs:
     
     defaults:
       run:
-        working-directory:./TuneAI
+        working-directory: ./TuneAI
 
     steps:
       - name: Checkout Code
