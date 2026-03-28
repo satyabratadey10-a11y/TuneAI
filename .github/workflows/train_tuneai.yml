@@ -4,9 +4,11 @@ on: [workflow_dispatch, push]
 jobs:
   train-model:
     runs-on: ubuntu-latest
+    
     defaults:
       run:
-       working-directory:./TuneAI
+        working-directory:./TuneAI
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
