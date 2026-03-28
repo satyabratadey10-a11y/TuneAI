@@ -51,8 +51,13 @@ class TuneAIModel(nn.Module):
         self.n_embd, self.block_size = 128, 256
         self.token_embedding_table = nn.Embedding(vocab_size, self.n_embd)
         self.position_embedding_table = nn.Embedding(self.block_size, self.n_embd)
-        # 5 Transformer blocks create ~1.05M parameters
-        self.blocks = nn.Sequential(*)
+        
+        # Define 5 layers to reach the 1M parameter target
+        layers =
+        
+        # Correctly unpack the 'layers' list into the Sequential container
+        self.blocks = nn.Sequential(*layers)
+        
         self.ln_f = nn.LayerNorm(self.n_embd)
         self.lm_head = nn.Linear(self.n_embd, vocab_size)
 
