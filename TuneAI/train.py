@@ -1,6 +1,6 @@
 import torch
 import os
-from model_arch import TuneAIModel
+from model_arch import TuneAIModel, TuneAiConfig
 from data_prepare import prepare_data
 
 # Configurations
@@ -15,8 +15,9 @@ data = torch.tensor([stoi[c] for c in text], dtype=torch.long)
 n = int(0.9 * len(data))
 train_data = data[:n]
 
-# 2. Initialize Model
-model = TuneAIModel(len(stoi)).to(device)
+# 2. Initialize Model Configuration and Model
+config = TuneAiConfig(vocab_size=len(stoi))
+model = TuneAIModel(config).to(device)
 optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 
 # 3. Training Loop
@@ -25,9 +26,9 @@ print(f"TuneAI training starting on {device}...")
 
 for iter in range(max_iters):
     # Sample a random batch of data
-    ix = torch.randint(len(train_data) - 256, (batch_size,))
-    x = torch.stack([train_data[i:i+256] for i in ix]).to(device)
-    y = torch.stack([train_data[i+1:i+257] for i in ix]).to(device)
+    ix = torch.randint(len(train_data) - config.block_size, (batch_size,))
+    x = torch.stack([train_data[i:i+config.block_size] for i in ix]).to(device)
+    y = torch.stack([train_data[i+1:i+config.block_size+1] for i in ix]).to(device)
 
     logits, loss = model(x, y)
     optimizer.zero_grad(set_to_none=True)
