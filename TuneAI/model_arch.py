@@ -1,70 +1,107 @@
+import math
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+from torch.nn import functional as F
+from dataclasses import dataclass
 
-class Head(nn.Module):
-    def __init__(self, head_size, n_embd, block_size):
+@dataclass
+class TuneAiConfig:
+    block_size: int = 256
+    vocab_size: int = 122
+    n_layer: int = 4
+    n_head: int = 4
+    n_embd: int = 128
+    dropout: float = 0.0
+
+class CausalSelfAttention(nn.Module):
+    def __init__(self, config):
         super().__init__()
-        self.key = nn.Linear(n_embd, head_size, bias=False)
-        self.query = nn.Linear(n_embd, head_size, bias=False)
-        self.value = nn.Linear(n_embd, head_size, bias=False)
-        self.register_buffer('tril', torch.tril(torch.ones(block_size, block_size)))
+        assert config.n_embd % config.n_head == 0
+        self.c_attn = nn.Linear(config.n_embd, 3 * config.n_embd, bias=False)
+        self.c_proj = nn.Linear(config.n_embd, config.n_embd, bias=False)
+        self.resid_dropout = nn.Dropout(config.dropout)
+        self.n_head = config.n_head
+        self.n_embd = config.n_embd
+        self.dropout = config.dropout
 
     def forward(self, x):
-        B, T, C = x.shape
-        k, q, v = self.key(x), self.query(x), self.value(x)
-        wei = q @ k.transpose(-2, -1) * C**-0.5
-        wei = wei.masked_fill(self.tril == 0, float('-inf'))
-        wei = F.softmax(wei, dim=-1)
-        return wei @ v
+        B, T, C = x.size()
+        q, k, v  = self.c_attn(x).split(self.n_embd, dim=2)
+        k = k.view(B, T, self.n_head, C // self.n_head).transpose(1, 2)
+        q = q.view(B, T, self.n_head, C // self.n_head).transpose(1, 2)
+        v = v.view(B, T, self.n_head, C // self.n_head).transpose(1, 2)
+        
+        y = F.scaled_dot_product_attention(
+            q, k, v, 
+            attn_mask=None, 
+            dropout_p=self.dropout if self.training else 0, 
+            is_causal=True
+        )
+        y = y.transpose(1, 2).contiguous().view(B, T, C)
+        y = self.resid_dropout(self.c_proj(y))
+        return y
 
-class MultiHeadAttention(nn.Module):
-    def __init__(self, num_heads, head_size, n_embd, block_size):
+class FeedForward(nn.Module):
+    def __init__(self, config):
         super().__init__()
-        self.heads = nn.ModuleList([Head(head_size, n_embd, block_size) for _ in range(num_heads)])
-        self.proj = nn.Linear(n_embd, n_embd)
+        self.c_fc    = nn.Linear(config.n_embd, 4 * config.n_embd, bias=False)
+        self.gelu    = nn.GELU()
+        self.c_proj  = nn.Linear(4 * config.n_embd, config.n_embd, bias=False)
+        self.dropout = nn.Dropout(config.dropout)
 
     def forward(self, x):
-        out = torch.cat([h(x) for h in self.heads], dim=-1)
-        return self.proj(out)
+        x = self.c_fc(x)
+        x = self.gelu(x)
+        x = self.c_proj(x)
+        x = self.dropout(x)
+        return x
 
 class Block(nn.Module):
-    def __init__(self, n_embd, n_head, block_size):
+    def __init__(self, config):
         super().__init__()
-        head_size = n_embd // n_head
-        self.sa = MultiHeadAttention(n_head, head_size, n_embd, block_size)
-        self.ffwd = nn.Sequential(
-            nn.Linear(n_embd, 4 * n_embd),
-            nn.ReLU(),
-            nn.Linear(4 * n_embd, n_embd),
-        )
-        self.ln1, self.ln2 = nn.LayerNorm(n_embd), nn.LayerNorm(n_embd)
+        self.ln_1 = nn.LayerNorm(config.n_embd)
+        self.attn = CausalSelfAttention(config)
+        self.ln_2 = nn.LayerNorm(config.n_embd)
+        self.mlp = FeedForward(config)
 
     def forward(self, x):
-        x = x + self.sa(self.ln1(x))
-        x = x + self.ffwd(self.ln2(x))
+        x = x + self.attn(self.ln_1(x))
+        x = x + self.mlp(self.ln_2(x))
         return x
 
 class TuneAIModel(nn.Module):
-    def __init__(self, vocab_size):
+    def __init__(self, config):
         super().__init__()
-        self.n_embd, self.block_size = 128, 256
-        self.token_embedding_table = nn.Embedding(vocab_size, self.n_embd)
-        self.position_embedding_table = nn.Embedding(self.block_size, self.n_embd)
-        
-        # Define 5 layers to reach the 1M parameter target
-        layers =
-        
-        # Correctly unpack the 'layers' list into the Sequential container
-        self.blocks = nn.Sequential(*layers)
-        
-        self.ln_f = nn.LayerNorm(self.n_embd)
-        self.lm_head = nn.Linear(self.n_embd, vocab_size)
+        self.config = config
+        self.transformer = nn.ModuleDict(dict(
+            wte = nn.Embedding(config.vocab_size, config.n_embd),
+            wpe = nn.Embedding(config.block_size, config.n_embd),
+            drop = nn.Dropout(config.dropout),
+            h = nn.Sequential(*[Block(config) for _ in range(config.n_layer)]),
+            ln_f = nn.LayerNorm(config.n_embd),
+        ))
+        self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=False)
+        self.transformer.wte.weight = self.lm_head.weight
 
     def forward(self, idx, targets=None):
-        B, T = idx.shape
-        x = self.token_embedding_table(idx) + self.position_embedding_table(torch.arange(T, device=idx.device))
-        x = self.blocks(x)
-        logits = self.lm_head(self.ln_f(x))
-        loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1)) if targets is not None else None
+        device = idx.device
+        b, t = idx.size()
+        assert t <= self.config.block_size, f"Cannot forward sequence of length {t}, block size is only {self.config.block_size}"
+        
+        pos = torch.arange(0, t, dtype=torch.long, device=device)
+        
+        tok_emb = self.transformer.wte(idx)
+        pos_emb = self.transformer.wpe(pos)
+        x = self.transformer.drop(tok_emb + pos_emb)
+        
+        x = self.transformer.h(x)
+        x = self.transformer.ln_f(x)
+        
+        if targets is not None:
+            logits = self.lm_head(x)
+            loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1)
+        else:
+            logits = self.lm_head(x[:, [-1], :])
+            loss = None
+            
         return logits, loss
