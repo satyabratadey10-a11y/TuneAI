@@ -30282,3 +30282,76 @@ Specification Enhancement Proposals (SEPs) are the primary mechanism for proposi
 | <Badge>Dormant</Badge>    | SEP without a sponsor, closed after 6 months             |
 
 
+[ANDROID_MANIFEST_PRO]
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
+    <application android:theme="@style/Theme.TurnIt" android:label="TuneAi">
+        <activity android:name=".MainActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
+
+[GRADLE_KOTLIN_DSL]
+plugins {
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
+}
+android {
+    namespace = "com.turnit.ai"
+    compileSdk = 33
+    defaultConfig {
+        applicationId = "com.turnit.ai"
+        minSdk = 24
+        targetSdk = 33
+        versionCode = 1
+        versionName = "1.0"
+    }
+    buildTypes {
+        release {
+            isMinifyEnabled = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+        }
+    }
+}
+dependencies {
+    implementation("androidx.core:core-ktx:1.12.0")
+    implementation("androidx.compose.ui:ui:1.5.0")
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+}
+
+[JETPACK_COMPOSE_UI]
+@Composable
+def ChatBubble(message: String, isUser: Boolean) {
+    Column(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = if (isUser) Color.Red else Color.DarkGray,
+            elevation = 4.dp
+        ) {
+            Text(text = message, modifier = Modifier.padding(16.dp))
+        }
+    }
+}
+
+[KOTLIN_COROUTINES_LOGIC]
+class MainViewModel : ViewModel() {
+    private val _uiState = MutableStateFlow(UiState.Loading)
+    val uiState: StateFlow<UiState> = _uiState.asStateFlow()
+
+    fun fetchData() {
+        viewModelScope.launch {
+            try {
+                val result = repository.getData()
+                _uiState.value = UiState.Success(result)
+            } catch (e: Exception) {
+                _uiState.value = UiState.Error(e.message)
+            }
+        }
+    }
+}
+
+
