@@ -1,0 +1,50 @@
+name: TuneAi Training Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  train-slm:
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: ./TuneAI
+        
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          pip install torch numpy --index-url https://download.pytorch.org/whl/cpu
+          pip install huggingface_hub
+          
+      - name: Prepare Dataset
+        run: python data_prepare.py
+        
+      - name: Execute Training (1M Parameters)
+        run: python train.py
+
+      - name: Upload Compiled Model Weights to GitHub
+        uses: actions/upload-artifact@v4
+        with:
+          name: tuneai-v1-checkpoint
+          path: TuneAI/checkpoints/tuneai_v1.pth
+          retention-days: 5
+
+      - name: Deploy API directly to Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          # This securely pushes your app, Dockerfile, and .pth file straight to Hugging Face
+          huggingface-cli upload satyabratadey10/TuneAi . . --repo-type space --token $HF_TOKEN
