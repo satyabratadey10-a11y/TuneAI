@@ -25,6 +25,9 @@ jobs:
         run: |
           python data_prepare.py
           python train.py
+          
+      - name: Test AI Generation
+        run: python generate.py
 
       - name: Upload Trained Brain
         uses: actions/upload-artifact@v4
