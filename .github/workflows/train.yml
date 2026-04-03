@@ -46,5 +46,4 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          # This securely pushes your app, Dockerfile, and .pth file straight to Hugging Face
-          huggingface-cli upload satyabratadey10/TuneAi . . --repo-type space --token $HF_TOKEN
+          python -c "from huggingface_hub import HfApi; import os; api = HfApi(); api.upload_folder(repo_id='satyabratadey10/TuneAi', folder_path='.', repo_type='space', token=os.environ['HF_TOKEN'])"
