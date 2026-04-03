@@ -1,87 +1,30 @@
 import os
 import torch
 
-def generate_turnit_dataset(file_path):
+def generate_build_tools_dataset(file_path):
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
-    dataset_content = """[ANDROID_MANIFEST]
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <uses-permission android:name="android.permission.INTERNET" />
-    <application android:theme="@style/Theme.TurnIt" android:label="TurnIt">
-        <activity android:name=".MainActivity" android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-    </application>
-</manifest>
+    dataset_content = """[GRADLE_BUILD_SYSTEM]
+Gradle is a build automation tool used by Android Studio.
+It compiles resources and source code into APKs or AABs.
+Tasks include assembling, compiling, and packaging.
 
-[GRADLE_KOTLIN_DSL]
-plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
-}
-android {
-    namespace = "com.turnit.ai"
-    compileSdk = 33
-    defaultConfig {
-        applicationId = "com.turnit.ai"
-        minSdk = 24
-        targetSdk = 33
-        versionCode = 1
-        versionName = "1.0"
-    }
-}
+[AAPT_TOOL]
+aapt (Android Asset Packaging Tool) compiles AndroidManifest.xml and XML resources.
+It generates the R.java class so you can reference resources in Java/Kotlin code.
 
-[COMPOSE_CHAT_UI]
-@Composable
-fun ChatScreen(messages: List<ChatMessage>) {
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
-        items(messages) { message ->
-            // Gravity.END for User (Right), Gravity.START for AI (Left)
-            val alignment = if (message.isUser) Alignment.End else Alignment.Start
-            val bgColor = if (message.isUser) Color.Transparent else Color(0x33FFFFFF)
-            
-            Box(contentAlignment = alignment, modifier = Modifier.fillMaxWidth().padding(8.dp)) {
-                // Glassmorphism base
-                Surface(shape = RoundedCornerShape(16.dp), color = bgColor) {
-                    Text(text = message.text, color = Color.White, modifier = Modifier.padding(12.dp))
-                }
-            }
-        }
-    }
-}
+[AAPT2_TOOL]
+AAPT2 parses, indexes, and compiles Android resources into a binary format.
+It supports incremental compilation by dividing the process into two steps: Compile and Link.
+This dramatically improves build speed compared to the older aapt.
 
-[COMPOSE_ANIMATION]
-@Composable
-fun AnimatedRGBBorder(content: @Composable () -> Unit) {
-    val infiniteTransition = rememberInfiniteTransition()
-    val angle by infiniteTransition.animateFloat(
-        initialValue = 0f, targetValue = 360f,
-        animationSpec = infiniteRepeatable(animation = tween(2000, easing = LinearEasing))
-    )
-    Box(modifier = Modifier.drawBehind {
-        rotate(angle) {
-            // Flowing RGB gradient
-            drawRect(brush = Brush.sweepGradient(listOf(Color.Red, Color.Green, Color.Blue, Color.Red)))
-        }
-    }) { content() }
-}
-
-[COMPOSE_NAVIGATION_DRAWER]
-@Composable
-fun TurnItDrawer(onNavigate: (String) -> Unit) {
-    ModalDrawerSheet {
-        // 3-line hamburger menu items
-        NavigationDrawerItem(icon = { Icon(Icons.Default.Add, "New Chat") }, label = { Text("New Chat") }, selected = false, onClick = { onNavigate("new_chat") })
-        NavigationDrawerItem(icon = { Icon(Icons.Default.History, "History") }, label = { Text("History") }, selected = false, onClick = { onNavigate("history") })
-        NavigationDrawerItem(icon = { Icon(Icons.Default.Settings, "API Key Settings") }, label = { Text("API Key Settings") }, selected = false, onClick = { onNavigate("settings") })
-    }
-}
+[APT_ANNOTATION_PROCESSING]
+APT (Annotation Processing Tool) generates code at compile time.
+For Kotlin, kapt and KSP (Kotlin Symbol Processing) handle these annotations.
+Commonly used with libraries like Room, Dagger, and Hilt.
 """
     with open(file_path, 'w', encoding='utf-8') as f:
         f.write(dataset_content.strip())
-    print(f"Auto-generated TurnIt dataset at {file_path}")
+    print(f"Auto-generated Android Build Tools dataset at {file_path}")
 
 def prepare_data():
     dataset_dir = 'dataset'
@@ -89,8 +32,8 @@ def prepare_data():
     
     # Self-healing logic: Create dataset if it doesn't exist
     if not os.path.exists(dataset_dir) or not any(f.endswith('.txt') for f in os.listdir(dataset_dir)):
-        print("Error avoided: No text files found in dataset/. Generating Gold Set...")
-        generate_turnit_dataset(file_path)
+        print("No text files found in dataset/. Generating Build Tools Set...")
+        generate_build_tools_dataset(file_path)
 
     text = ""
     for file in os.listdir(dataset_dir):
