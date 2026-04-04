@@ -9,7 +9,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy your AI API scripts and weights
 COPY . .
 
-# Expose the port Hugging Face requires
+# Expose the mandatory Hugging Face port
 EXPOSE 7860
 
 # Start the FastAPI server
