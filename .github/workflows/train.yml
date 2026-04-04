@@ -46,4 +46,4 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          python -c "from huggingface_hub import HfApi; import os; api = HfApi(); repo_id = 'satyabratadey10/TuneAi'; api.create_repo(repo_id=repo_id, repo_type='space', space_sdk='docker', exist_ok=True, token=os.environ['HF_TOKEN']); api.upload_folder(repo_id=repo_id, folder_path='.', repo_type='space', token=os.environ['HF_TOKEN'])"
+          python -c "from huggingface_hub import HfApi; import os; api = HfApi(); repo_id = 'satyabratadey10/TuneAi'; api.upload_folder(repo_id=repo_id, folder_path='.', repo_type='space', token=os.environ['HF_TOKEN'])"
