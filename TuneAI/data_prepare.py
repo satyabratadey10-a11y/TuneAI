@@ -1,57 +1,42 @@
 import os
-import torch
+import numpy as np
+from datasets import load_dataset
+from transformers import AutoTokenizer
 
-def generate_build_tools_dataset(file_path):
-    os.makedirs(os.path.dirname(file_path), exist_ok=True)
-    dataset_content = """[GRADLE_BUILD_SYSTEM]
-Gradle is a build automation tool used by Android Studio.
-It compiles resources and source code into APKs or AABs.
-Tasks include assembling, compiling, and packaging.
-
-[AAPT_TOOL]
-aapt (Android Asset Packaging Tool) compiles AndroidManifest.xml and XML resources.
-It generates the R.java class so you can reference resources in Java/Kotlin code.
-
-[AAPT2_TOOL]
-AAPT2 parses, indexes, and compiles Android resources into a binary format.
-It supports incremental compilation by dividing the process into two steps: Compile and Link.
-This dramatically improves build speed compared to the older aapt.
-
-[APT_ANNOTATION_PROCESSING]
-APT (Annotation Processing Tool) generates code at compile time.
-For Kotlin, kapt and KSP (Kotlin Symbol Processing) handle these annotations.
-Commonly used with libraries like Room, Dagger, and Hilt.
-"""
-    with open(file_path, 'w', encoding='utf-8') as f:
-        f.write(dataset_content.strip())
-    print(f"Auto-generated Android Build Tools dataset at {file_path}")
-
-def prepare_data():
-    dataset_dir = 'dataset'
-    file_path = os.path.join(dataset_dir, 'llms-full.txt')
+def prepare():
+    os.makedirs('dataset', exist_ok=True)
+    print("1. Loading Python coding dataset...")
+    # Downloading 10% of a 25k instruction-code dataset to stay under GitHub's 6-hour CPU limit
+    dataset = load_dataset("flytech/python-codes-25k", split="train[:10%]")
     
-    # Self-healing logic: Create dataset if it doesn't exist
-    if not os.path.exists(dataset_dir) or not any(f.endswith('.txt') for f in os.listdir(dataset_dir)):
-        print("No text files found in dataset/. Generating Build Tools Set...")
-        generate_build_tools_dataset(file_path)
-
-    text = ""
-    for file in os.listdir(dataset_dir):
-        if file.endswith('.txt'):
-            with open(os.path.join(dataset_dir, file), 'r', encoding='utf-8') as f:
-                text += f.read() + "\n"
-
-    if not text:
-        raise ValueError("Dataset is empty even after generation attempt.")
-
-    chars = sorted(list(set(text)))
-    vocab_size = len(chars)
+    print("2. Initializing GPT-2 BPE Tokenizer...")
+    tokenizer = AutoTokenizer.from_pretrained("gpt2")
     
-    stoi = { ch:i for i,ch in enumerate(chars) }
-    itos = { i:ch for i,ch in enumerate(chars) }
+    # Format the data into a conversational structure
+    text_data = ""
+    for item in dataset:
+        instruction = item.get('instruction', '')
+        output = item.get('output', '')
+        text_data += f"<|user|>\n{instruction}\n<|assistant|>\n{output}\n<|endoftext|>\n"
+        
+    print(f"3. Tokenizing raw code...")
+    tokens = tokenizer.encode(text_data, add_special_tokens=False)
     
-    print(f"Data prepared. Vocabulary size: {vocab_size}")
-    return text, stoi, itos
+    # 90% Training, 10% Validation split
+    n = len(tokens)
+    train_data = tokens[:int(n*0.9)]
+    val_data = tokens[int(n*0.9):]
+    
+    print("4. Compressing and saving binary blocks...")
+    # GPT2 vocab size is 50257, which perfectly fits inside a uint16 (max 65535) saving massive RAM
+    np.array(train_data, dtype=np.uint16).tofile('dataset/train.bin')
+    np.array(val_data, dtype=np.uint16).tofile('dataset/val.bin')
+    
+    # Save a metadata file so train.py knows exactly how many outputs the neural net requires
+    with open('dataset/meta.txt', 'w') as f:
+        f.write(str(tokenizer.vocab_size))
+        
+    print(f"Data preparation complete. Train tokens: {len(train_data)}, Val tokens: {len(val_data)}")
 
-if __name__ == "__main__":
-    prepare_data()
+if __name__ == '__main__':
+    prepare()
