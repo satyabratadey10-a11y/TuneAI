@@ -12,5 +12,5 @@ COPY . .
 # Expose the mandatory Hugging Face port
 EXPOSE 7860
 
-# Start the FastAPI server
-CMD ["python", "app.py"]
+# Force the container to boot Uvicorn directly, ignoring app.py execution quirks
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "7860"]
