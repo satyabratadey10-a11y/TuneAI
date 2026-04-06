@@ -27,12 +27,12 @@ jobs:
       - name: Install Dependencies
         run: |
           pip install torch numpy --index-url https://download.pytorch.org/whl/cpu
-          pip install huggingface_hub
+          pip install huggingface_hub transformers datasets
           
       - name: Prepare Dataset
         run: python data_prepare.py
         
-      - name: Execute Training (1M Parameters)
+      - name: Execute Training (35M Parameters)
         run: python train.py
 
       - name: Upload Compiled Model Weights to GitHub
