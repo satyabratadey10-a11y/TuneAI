@@ -5,7 +5,6 @@ import torch
 from fastapi import FastAPI, Header, HTTPException, Depends
 from pydantic import BaseModel
 from model_arch import TuneAiModel, TuneAiConfig
-from data_prepare import prepare_data
 
 # Initialize FastAPI
 app = FastAPI(title="TuneAi SLM API")
